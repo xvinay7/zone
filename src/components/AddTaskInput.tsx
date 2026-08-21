@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import type { TaskCategory, Zone } from '../types'
+import { shortenPlaceName } from '../lib/format'
 import Button from './ui/Button'
 import Input from './ui/Input'
 
@@ -28,7 +29,7 @@ export default function AddTaskInput({
   disabled = false,
 }: AddTaskInputProps) {
   const [value, setValue] = useState('')
-  const [category, setCategory] = useState<TaskCategory>('other')
+  const [category, setCategory] = useState<TaskCategory>('grocery')
   const [selectedZoneId, setSelectedZoneId] = useState<string>('')
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -37,7 +38,7 @@ export default function AddTaskInput({
     if (!trimmed) return
     onAdd(trimmed, category, selectedZoneId || undefined)
     setValue('')
-    setCategory('other')
+    // Do NOT reset category — user likely wants to keep adding in the same category.
     setSelectedZoneId('')
   }
 
@@ -93,7 +94,7 @@ export default function AddTaskInput({
             <option value="">No Zone (Use current pin / Anywhere)</option>
             {zones.map((z) => (
               <option key={z.id} value={z.id}>
-                Zone: {z.name}
+                📍 {shortenPlaceName(z.name)}
               </option>
             ))}
           </select>

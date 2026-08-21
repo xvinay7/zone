@@ -25,7 +25,7 @@ const MAP_STYLE: StyleSpecification = {
     },
   ],
 };
-const DEFAULT_CENTER: LatLng = { lat: 37.7749, lng: -122.4194 }
+const DEFAULT_CENTER: LatLng = { lat: 12.9716, lng: 77.5946 }
 
 export interface MapProps {
   initialCenter?: LatLng

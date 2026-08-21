@@ -15,7 +15,7 @@ import { shortenPlaceName } from './lib/format'
 import type { NearbyStore, TaskCategory } from './types'
 import type { LatLng } from './types/location'
 
-const DEFAULT_CENTER: LatLng = { lat: 37.7749, lng: -122.4194 }
+const DEFAULT_CENTER: LatLng = { lat: 12.9716, lng: 77.5946 }
 
 function App() {
   const { userId } = useAuth()
@@ -189,14 +189,9 @@ function App() {
         : `${(distanceMetres / 1000).toFixed(1)} km`
       : ''
 
-  // Pending tasks first, done tasks at the bottom.
-  const sortedTasks = useMemo(
-    () => [
-      ...tasks.filter((t) => t.status !== 'done'),
-      ...tasks.filter((t) => t.status === 'done'),
-    ],
-    [tasks],
-  )
+  // Split tasks into pending and completed for separate sections.
+  const pendingTasks = useMemo(() => tasks.filter((t) => t.status !== 'done'), [tasks])
+  const completedTasks = useMemo(() => tasks.filter((t) => t.status === 'done'), [tasks])
 
   return (
     <div className="min-h-svh bg-stone-50 font-sans text-stone-900">
@@ -258,14 +253,15 @@ function App() {
             zones={zones}
             placeholder={
               currentPlace
-                ? `Add a task for ${currentPlace.name}…`
+                ? `Add a task for ${shortenPlaceName(currentPlace.name)}…`
                 : 'What do you need to do?'
             }
           />
           {currentPlace && (
             <p className="mt-1.5 text-xs text-stone-400">
-              Place:{' '}
-              <span className="font-medium text-stone-600">{shortenPlaceName(currentPlace.name)}</span>
+              <span className="font-medium text-stone-600">
+                📍 {shortenPlaceName(currentPlace.name)}
+              </span>
               {' '}
               &middot;{' '}
               <button
@@ -297,12 +293,27 @@ function App() {
             Your tasks
           </h2>
           <TaskList
-            tasks={sortedTasks}
+            tasks={pendingTasks}
             status={taskStatus}
+            emptyMessage="No pending tasks. Add one above."
             onToggleDone={handleToggleDone}
             onDelete={handleDelete}
           />
         </section>
+
+        {completedTasks.length > 0 && (
+          <section className="mb-10">
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-stone-400">
+              Completed
+            </h2>
+            <TaskList
+              tasks={completedTasks}
+              status={taskStatus}
+              onToggleDone={handleToggleDone}
+              onDelete={handleDelete}
+            />
+          </section>
+        )}
 
         <SettingsPanel
           settings={{ maxSuggestionsPerDay }}
