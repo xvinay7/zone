@@ -1,13 +1,30 @@
 // Map — MapLibre map with OpenFreeMap tiles, place search, simulated draggable pin, and real geolocation.
 
-import { Map as MaplibreMap, Marker, NavigationControl } from 'maplibre-gl'
+import { Map as MaplibreMap, Marker, NavigationControl, type StyleSpecification } from 'maplibre-gl'
 import { useEffect, useRef, useState } from 'react'
 import type { LatLng, PlaceResult } from '../types/location'
 import PlaceSearch from './PlaceSearch'
 import Button from './ui/Button'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
-const OPENFREEMAP_STYLE = 'https://tiles.openfreemap.org/styles/positron'
+const MAP_STYLE: StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    },
+  },
+  layers: [
+    {
+      id: 'osm',
+      type: 'raster',
+      source: 'osm',
+    },
+  ],
+};
 const DEFAULT_CENTER: LatLng = { lat: 37.7749, lng: -122.4194 }
 
 export interface MapProps {
@@ -15,6 +32,8 @@ export interface MapProps {
   initialZoom?: number
   onSimulatedLocationChange?: (location: LatLng) => void
   onRealLocationChange?: (location: LatLng) => void
+  /** Called whenever the user selects a named place (via search or geocoding). */
+  onPlaceSelect?: (place: { name: string; lat: number; lng: number }) => void
 }
 
 function createMarkerElement(label: string, color: string): HTMLDivElement {
@@ -41,6 +60,7 @@ export default function Map({
   initialZoom = 12,
   onSimulatedLocationChange,
   onRealLocationChange,
+  onPlaceSelect,
 }: MapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<MaplibreMap | null>(null)
@@ -51,9 +71,12 @@ export default function Map({
   const [realLocation, setRealLocation] = useState<LatLng | null>(null)
   const [geoError, setGeoError] = useState<string | null>(null)
   const [isLocating, setIsLocating] = useState(false)
+  const [watchId, setWatchId] = useState<number | null>(null)
+  const isFirstLocateRef = useRef(false)
 
   const onSimulatedLocationChangeRef = useRef(onSimulatedLocationChange)
   const onRealLocationChangeRef = useRef(onRealLocationChange)
+  const onPlaceSelectRef = useRef(onPlaceSelect)
 
   useEffect(() => {
     onSimulatedLocationChangeRef.current = onSimulatedLocationChange
@@ -64,17 +87,26 @@ export default function Map({
   }, [onRealLocationChange])
 
   useEffect(() => {
+    onPlaceSelectRef.current = onPlaceSelect
+  }, [onPlaceSelect])
+
+  useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return
 
     const map = new MaplibreMap({
       container: mapContainerRef.current,
-      style: OPENFREEMAP_STYLE,
+      style: MAP_STYLE,
       center: [initialCenter.lng, initialCenter.lat],
       zoom: initialZoom,
       attributionControl: { compact: true },
     })
 
     map.addControl(new NavigationControl({ showCompass: false }), 'bottom-right')
+
+    // Log any map errors (e.g., tile loading failures)
+    map.on('error', (event) => {
+      console.error('MapLibre error:', event.error)
+    })
 
     const simulatedMarker = new Marker({
       element: createMarkerElement('SIMULATED LOCATION', '#d97706'),
@@ -84,7 +116,7 @@ export default function Map({
       .setLngLat([initialCenter.lng, initialCenter.lat])
       .addTo(map)
 
-    simulatedMarker.on('dragend', () => {
+    simulatedMarker.on('drag', () => {
       const { lat, lng } = simulatedMarker.getLngLat()
       const next = { lat, lng }
       setSimulatedLocation(next)
@@ -104,6 +136,14 @@ export default function Map({
     }
   }, [initialCenter.lat, initialCenter.lng, initialZoom])
 
+  useEffect(() => {
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId)
+      }
+    }
+  }, [watchId])
+
   function flyTo(location: LatLng, zoom = 14) {
     mapRef.current?.flyTo({
       center: [location.lng, location.lat],
@@ -117,6 +157,8 @@ export default function Map({
     simulatedMarkerRef.current?.setLngLat([place.lng, place.lat])
     setSimulatedLocation(next)
     onSimulatedLocationChangeRef.current?.(next)
+    // Propagate the human-readable place name and coords up so App can use it
+    onPlaceSelectRef.current?.({ name: place.name, lat: place.lat, lng: place.lng })
     flyTo(next)
   }
 
@@ -126,10 +168,18 @@ export default function Map({
       return
     }
 
+    if (watchId !== null) {
+      navigator.geolocation.clearWatch(watchId)
+      setWatchId(null)
+      setIsLocating(false)
+      return
+    }
+
     setIsLocating(true)
     setGeoError(null)
+    isFirstLocateRef.current = true
 
-    navigator.geolocation.getCurrentPosition(
+    const id = navigator.geolocation.watchPosition(
       (position) => {
         const next = {
           lat: position.coords.latitude,
@@ -138,7 +188,12 @@ export default function Map({
 
         setRealLocation(next)
         onRealLocationChangeRef.current?.(next)
-        flyTo(next, 15)
+        
+        // Only fly on the first successful location update
+        if (isFirstLocateRef.current) {
+            flyTo(next, 15)
+            isFirstLocateRef.current = false
+        }
 
         if (realMarkerRef.current) {
           realMarkerRef.current.setLngLat([next.lng, next.lat])
@@ -156,6 +211,7 @@ export default function Map({
       },
       (error) => {
         setIsLocating(false)
+        setWatchId(null)
         if (error.code === error.PERMISSION_DENIED) {
           setGeoError('Location permission denied. Allow access to use your real location.')
           return
@@ -168,6 +224,8 @@ export default function Map({
         maximumAge: 0,
       },
     )
+    
+    setWatchId(id)
   }
 
   return (
@@ -192,9 +250,12 @@ export default function Map({
           fullWidth
           className="sm:w-auto sm:self-stretch"
           onClick={handleUseRealLocation}
-          disabled={isLocating}
         >
-          {isLocating ? 'Locating…' : 'Use my real location (REAL)'}
+          {watchId !== null
+            ? 'Stop tracking location'
+            : isLocating
+              ? 'Locating…'
+              : 'Use my real location (REAL)'}
         </Button>
       </div>
 

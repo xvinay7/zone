@@ -1,10 +1,15 @@
 export type TaskCategory = 'grocery' | 'pharmacy' | 'errand' | 'other'
 
+export type TaskStatus = 'pending' | 'done'
+
 export interface Task {
   id: string
   title: string
   category: TaskCategory
   place: string
+  lat?: number
+  lng?: number
+  status?: TaskStatus
 }
 
 export interface NearbyStore {

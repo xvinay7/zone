@@ -1,4 +1,5 @@
-// WhileImHereCard — contextual card for nearby tasks with an expandable "Why now?" section.
+// WhileImHereCard — contextual card for nearby tasks with an expandable "Why now?" section
+// and inline task completion.
 
 import { useState } from 'react'
 import type { DataStatus, NearbyStore, Task } from '../types'
@@ -14,6 +15,7 @@ export interface WhileImHereCardProps {
   errorMessage?: string
   emptyMessage?: string
   loadingLabel?: string
+  onToggleDone?: (id: string) => void
 }
 
 function WhileImHereCardSkeleton() {
@@ -38,8 +40,12 @@ export default function WhileImHereCard({
   errorMessage = 'We couldn\u2019t load nearby suggestions right now.',
   emptyMessage = 'No nearby tasks to suggest at the moment.',
   loadingLabel = 'Checking what\u2019s nearby',
+  onToggleDone,
 }: WhileImHereCardProps) {
   const [expanded, setExpanded] = useState(false)
+
+  const pendingTasks = tasks.filter((t) => t.status !== 'done')
+  const doneTasks = tasks.filter((t) => t.status === 'done')
 
   return (
     <DataStateView
@@ -58,19 +64,61 @@ export default function WhileImHereCard({
         <h2 className="mt-2 text-xl font-semibold text-stone-900">{store.name}</h2>
 
         <p className="mt-1 text-base text-stone-600">
-          {store.taskCount} tasks nearby
+          {pendingTasks.length} task{pendingTasks.length !== 1 ? 's' : ''} to do
+          {doneTasks.length > 0 && (
+            <span className="text-stone-400">
+              {' '}
+              · {doneTasks.length} done
+            </span>
+          )}
           <span className="text-stone-400"> · </span>+{store.extraMinutes} min
         </p>
 
         <ul className="mt-4 space-y-2">
-          {tasks.map((task) => (
-            <li
-              key={task.id}
-              className="rounded-lg bg-white/70 px-3 py-2 text-sm text-stone-700"
-            >
-              {task.title}
-            </li>
-          ))}
+          {tasks.map((task) => {
+            const isDone = task.status === 'done'
+            return (
+              <li key={task.id}>
+                <button
+                  type="button"
+                  onClick={() => onToggleDone?.(task.id)}
+                  aria-label={
+                    isDone
+                      ? `Mark "${task.title}" as pending`
+                      : `Mark "${task.title}" as done`
+                  }
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
+                    isDone
+                      ? 'bg-white/40 text-stone-400'
+                      : 'bg-white/70 text-stone-700 hover:bg-white/90'
+                  }`}
+                >
+                  {/* Mini checkbox */}
+                  <span
+                    className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${
+                      isDone
+                        ? 'border-accent bg-accent text-white'
+                        : 'border-stone-300 bg-white'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {isDone && (
+                      <svg viewBox="0 0 12 12" fill="none" className="size-2.5">
+                        <path
+                          d="M2 6l3 3 5-5"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    )}
+                  </span>
+                  <span className={isDone ? 'line-through' : ''}>{task.title}</span>
+                </button>
+              </li>
+            )
+          })}
         </ul>
 
         <Button

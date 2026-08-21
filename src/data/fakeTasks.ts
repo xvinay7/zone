@@ -1,4 +1,5 @@
 import type { Task } from '../types'
+import type { LatLng } from '../types/location'
 
 export const INITIAL_TASKS: Task[] = [
   {
@@ -26,6 +27,10 @@ export const INITIAL_TASKS: Task[] = [
     place: 'Home',
   },
 ]
+
+// Geographic coordinates of the simulated nearby store.
+// Trader Joe's, Castro St, San Francisco — close to the default map center.
+export const NEARBY_STORE_LOCATION: LatLng = { lat: 37.7617, lng: -122.4350 }
 
 export const NEARBY_STORE = {
   name: "Trader Joe's",
@@ -59,3 +64,7 @@ export const NEARBY_TASKS: Task[] = [
 export const DEFAULT_SETTINGS = {
   maxSuggestionsPerDay: 3,
 }
+
+/** Threshold in metres within which a store is considered "nearby". */
+export const NEARBY_THRESHOLD_METRES = 500
+

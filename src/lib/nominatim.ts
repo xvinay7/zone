@@ -1,7 +1,7 @@
 import type { PlaceResult } from '../types/location'
 
 const NOMINATIM_BASE =
-  import.meta.env.VITE_NOMINATIM_BASE_URL ?? '/api/nominatim'
+  import.meta.env.VITE_NOMINATIM_BASE_URL ?? 'https://nominatim.openstreetmap.org'
 
 const APP_USER_AGENT =
   import.meta.env.VITE_APP_USER_AGENT ??
