@@ -10,6 +10,15 @@ export interface Task {
   lat?: number
   lng?: number
   status?: TaskStatus
+  zoneId?: string
+}
+
+export interface Zone {
+  id: string
+  name: string
+  lat: number
+  lng: number
+  radius: number
 }
 
 export interface NearbyStore {

@@ -2,6 +2,7 @@
 // Done tasks appear at the bottom with a remove button.
 
 import type { DataStatus, Task } from '../types'
+import { shortenPlaceName } from '../lib/format'
 import Chip from './ui/Chip'
 import DataStateView from './ui/DataStateView'
 import Skeleton from './ui/Skeleton'
@@ -129,7 +130,7 @@ export default function TaskList({
                 <p
                   className={`text-sm ${isDone ? 'text-stone-300' : 'text-stone-400'}`}
                 >
-                  {task.place}
+                  {shortenPlaceName(task.place)}
                 </p>
               </div>
             </li>

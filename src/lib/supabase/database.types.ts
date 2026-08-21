@@ -16,6 +16,7 @@ export interface Database {
           lng: number | null
           status: TaskStatus
           created_at: string
+          zone_id: string | null
         }
         Insert: {
           id?: string
@@ -27,6 +28,7 @@ export interface Database {
           lng?: number | null
           status?: TaskStatus
           created_at?: string
+          zone_id?: string | null
         }
         Update: {
           id?: string
@@ -38,8 +40,17 @@ export interface Database {
           lng?: number | null
           status?: TaskStatus
           created_at?: string
+          zone_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tasks_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "zones"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       suggestions_log: {
         Row: {
@@ -92,6 +103,36 @@ export interface Database {
         }
         Relationships: []
       }
+      zones: {
+        Row: {
+          id: string
+          user_id: string
+          name: string
+          lat: number
+          lng: number
+          radius_m: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          name: string
+          lat: number
+          lng: number
+          radius_m?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          name?: string
+          lat?: number
+          lng?: number
+          radius_m?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>
@@ -107,6 +148,10 @@ export interface Database {
 export type TaskRow = Database['public']['Tables']['tasks']['Row']
 export type TaskInsert = Database['public']['Tables']['tasks']['Insert']
 export type TaskUpdate = Database['public']['Tables']['tasks']['Update']
+
+export type ZoneRow = Database['public']['Tables']['zones']['Row']
+export type ZoneInsert = Database['public']['Tables']['zones']['Insert']
+export type ZoneUpdate = Database['public']['Tables']['zones']['Update']
 
 export class DataError extends Error {
   constructor(

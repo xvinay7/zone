@@ -8,7 +8,7 @@ import {
 
 export type NewTask = Pick<
   TaskInsert,
-  'user_id' | 'title' | 'category' | 'place_name' | 'lat' | 'lng'
+  'user_id' | 'title' | 'category' | 'place_name' | 'lat' | 'lng' | 'zone_id'
 >
 
 export async function getTasks(userId: string): Promise<TaskRow[]> {
@@ -42,6 +42,7 @@ export async function addTask(task: NewTask): Promise<TaskRow> {
         lat: task.lat ?? null,
         lng: task.lng ?? null,
         status: 'pending',
+        zone_id: task.zone_id ?? null,
       })
       .select()
       .single()
@@ -85,5 +86,18 @@ export async function updateTaskStatus(
   } catch (error) {
     if (error instanceof DataError) throw error
     throw new DataError('Unexpected error while updating task status.', error)
+  }
+}
+
+export async function deleteTask(id: string): Promise<void> {
+  try {
+    const { error } = await supabase.from('tasks').delete().eq('id', id)
+
+    if (error) {
+      throw new DataError('Failed to delete task.', error)
+    }
+  } catch (error) {
+    if (error instanceof DataError) throw error
+    throw new DataError('Unexpected error while deleting task.', error)
   }
 }

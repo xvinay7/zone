@@ -1,7 +1,7 @@
 // AddTaskInput — text field with category picker and add button.
 
 import { useState, type FormEvent } from 'react'
-import type { TaskCategory } from '../types'
+import type { TaskCategory, Zone } from '../types'
 import Button from './ui/Button'
 import Input from './ui/Input'
 
@@ -13,7 +13,8 @@ const CATEGORIES: { value: TaskCategory; label: string; emoji: string }[] = [
 ]
 
 export interface AddTaskInputProps {
-  onAdd: (title: string, category: TaskCategory) => void
+  onAdd: (title: string, category: TaskCategory, zoneId?: string) => void
+  zones?: Zone[]
   placeholder?: string
   buttonLabel?: string
   disabled?: boolean
@@ -21,20 +22,23 @@ export interface AddTaskInputProps {
 
 export default function AddTaskInput({
   onAdd,
+  zones = [],
   placeholder = 'What do you need to do?',
   buttonLabel = 'Add',
   disabled = false,
 }: AddTaskInputProps) {
   const [value, setValue] = useState('')
   const [category, setCategory] = useState<TaskCategory>('other')
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('')
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const trimmed = value.trim()
     if (!trimmed) return
-    onAdd(trimmed, category)
+    onAdd(trimmed, category, selectedZoneId || undefined)
     setValue('')
     setCategory('other')
+    setSelectedZoneId('')
   }
 
   return (
@@ -76,6 +80,25 @@ export default function AddTaskInput({
           )
         })}
       </div>
+
+      {/* Zone selector */}
+      {zones.length > 0 && (
+        <div className="mt-2 text-sm">
+          <select
+            value={selectedZoneId}
+            onChange={(e) => setSelectedZoneId(e.target.value)}
+            disabled={disabled}
+            className="rounded border border-stone-300 bg-white px-2 py-1 text-stone-700 outline-none focus:border-accent focus:ring-1 focus:ring-accent"
+          >
+            <option value="">No Zone (Use current pin / Anywhere)</option>
+            {zones.map((z) => (
+              <option key={z.id} value={z.id}>
+                Zone: {z.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   )
 }

@@ -4,16 +4,24 @@ import Map from './components/Map'
 import SettingsPanel from './components/SettingsPanel'
 import TaskList from './components/TaskList'
 import WhileImHereCard from './components/WhileImHereCard'
-import { DEFAULT_SETTINGS, INITIAL_TASKS, NEARBY_THRESHOLD_METRES } from './data/fakeTasks'
+import ZoneManager from './components/ZoneManager'
+import { DEFAULT_SETTINGS, NEARBY_THRESHOLD_METRES } from './data/fakeTasks'
 import { haversineDistance } from './hooks/useProximity'
+import { useAuth } from './hooks/useAuth'
 import { useLocalStorage } from './hooks/useLocalStorage'
-import type { DataStatus, NearbyStore, Task, TaskCategory } from './types'
+import { useTasks } from './hooks/useTasks'
+import { useZones } from './hooks/useZones'
+import { shortenPlaceName } from './lib/format'
+import type { NearbyStore, TaskCategory } from './types'
 import type { LatLng } from './types/location'
 
 const DEFAULT_CENTER: LatLng = { lat: 37.7749, lng: -122.4194 }
 
 function App() {
-  const [tasks, setTasks] = useLocalStorage<Task[]>('remind_tasks', INITIAL_TASKS)
+  const { userId } = useAuth()
+  const { tasks, status: taskStatus, add: addTask, toggleDone, remove: removeTask } = useTasks(userId)
+  const { zones, status: zoneStatus, add: addZone, remove: removeZone } = useZones(userId)
+
   const [maxSuggestionsPerDay, setMaxSuggestionsPerDay] = useLocalStorage(
     'remind_max_suggestions',
     DEFAULT_SETTINGS.maxSuggestionsPerDay,
@@ -35,6 +43,19 @@ function App() {
   const nearbyUserTasks = useMemo(() => {
     return tasks.filter((task) => {
       if (task.status === 'done') return false
+
+      if (task.zoneId) {
+        const zone = zones.find((z) => z.id === task.zoneId)
+        if (zone) {
+          const d = haversineDistance(simulatedLocation, {
+            lat: zone.lat,
+            lng: zone.lng,
+          })
+          return d <= zone.radius
+        }
+        return false
+      }
+
       if (task.lat !== undefined && task.lng !== undefined) {
         const d = haversineDistance(simulatedLocation, {
           lat: task.lat,
@@ -44,7 +65,7 @@ function App() {
       }
       return false
     })
-  }, [tasks, simulatedLocation])
+  }, [tasks, zones, simulatedLocation])
 
   // If we have nearby tasks, group them by place name. We'll pick the most common place.
   // In a real app with multiple nearby locations, you might surface multiple cards.
@@ -65,15 +86,23 @@ function App() {
     return maxName
   }, [nearbyUserTasks])
 
-  // Get the distance to this store (by looking at the first task that matches it)
   const distanceMetres = useMemo(() => {
     if (!nearbyStoreName) return null
-    const task = nearbyUserTasks.find(
-      (t) => t.place === nearbyStoreName && t.lat !== undefined && t.lng !== undefined,
-    )
+    const task = nearbyUserTasks.find((t) => t.place === nearbyStoreName)
     if (!task) return null
-    return haversineDistance(simulatedLocation, { lat: task.lat!, lng: task.lng! })
-  }, [nearbyStoreName, nearbyUserTasks, simulatedLocation])
+
+    if (task.zoneId) {
+      const zone = zones.find((z) => z.id === task.zoneId)
+      if (zone) {
+        return haversineDistance(simulatedLocation, { lat: zone.lat, lng: zone.lng })
+      }
+    }
+
+    if (task.lat !== undefined && task.lng !== undefined) {
+      return haversineDistance(simulatedLocation, { lat: task.lat, lng: task.lng })
+    }
+    return null
+  }, [nearbyStoreName, nearbyUserTasks, simulatedLocation, zones])
 
   const nearStore = nearbyStoreName !== null
 
@@ -95,10 +124,8 @@ function App() {
     return nearbyUserTasks.filter((t) => t.place === nearbyStoreName)
   }, [nearbyStoreName, nearbyUserTasks])
 
-  // Swap these to 'loading' | 'error' | 'empty' when wiring real data sources.
-  const taskStatus: DataStatus = 'ready'
-  const nearbyStatus: DataStatus = nearStore && cardTasks.length > 0 ? 'ready' : 'empty'
-  const settingsStatus: DataStatus = 'ready'
+  const nearbyStatus = nearStore && cardTasks.length > 0 ? 'ready' : ('empty' as const)
+  const settingsStatus = 'ready' as const
 
   // Proximity Alert Notification Engine
   const lastNotifiedStoreRef = useRef<string | null>(null)
@@ -135,33 +162,23 @@ function App() {
     setSimulatedLocation(location)
   }, [])
 
-  function handleAdd(title: string, category: TaskCategory) {
-    setTasks((previous) => [
-      ...previous,
-      {
-        id: crypto.randomUUID(),
-        title,
-        category,
-        place: currentPlace?.name.trim() || 'Unassigned',
-        lat: currentPlace?.lat,
-        lng: currentPlace?.lng,
-        status: 'pending',
-      },
-    ])
+  function handleAdd(title: string, category: TaskCategory, zoneId?: string) {
+    if (zoneId) {
+      const zone = zones.find((z) => z.id === zoneId)
+      if (zone) {
+        void addTask(title, category, { name: zone.name, lat: zone.lat, lng: zone.lng, zoneId })
+        return
+      }
+    }
+    void addTask(title, category, currentPlace)
   }
 
   function handleToggleDone(id: string) {
-    setTasks((previous) =>
-      previous.map((task) =>
-        task.id === id
-          ? { ...task, status: task.status === 'done' ? 'pending' : 'done' }
-          : task,
-      ),
-    )
+    void toggleDone(id)
   }
 
   function handleDelete(id: string) {
-    setTasks((previous) => previous.filter((task) => task.id !== id))
+    void removeTask(id)
   }
 
   // Format distance for display: metres below 1 km, km above.
@@ -204,6 +221,16 @@ function App() {
           />
         </section>
 
+        <section className="mb-10">
+          <ZoneManager
+            zones={zones}
+            status={zoneStatus}
+            onAddZone={addZone}
+            onDeleteZone={removeZone}
+            currentPlace={currentPlace}
+          />
+        </section>
+
         {/* Proximity indicator */}
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm">
           <span
@@ -213,7 +240,7 @@ function App() {
           <span className="text-stone-600">
             {nearStore ? (
               <>
-                You&apos;re near <strong>{nearbyStoreName}</strong> (
+                You&apos;re near <strong>{shortenPlaceName(nearbyStoreName)}</strong> (
                 {distanceLabel} away)
               </>
             ) : (
@@ -228,6 +255,7 @@ function App() {
         <div className="mb-6">
           <AddTaskInput
             onAdd={handleAdd}
+            zones={zones}
             placeholder={
               currentPlace
                 ? `Add a task for ${currentPlace.name}…`
@@ -237,7 +265,7 @@ function App() {
           {currentPlace && (
             <p className="mt-1.5 text-xs text-stone-400">
               Place:{' '}
-              <span className="font-medium text-stone-600">{currentPlace.name}</span>
+              <span className="font-medium text-stone-600">{shortenPlaceName(currentPlace.name)}</span>
               {' '}
               &middot;{' '}
               <button
@@ -258,7 +286,7 @@ function App() {
               store={storeForCard}
               tasks={cardTasks}
               status={nearbyStatus}
-              emptyMessage={`No tasks assigned to ${nearbyStoreName} yet.`}
+              emptyMessage={`No tasks assigned to ${shortenPlaceName(nearbyStoreName)} yet.`}
               onToggleDone={handleToggleDone}
             />
           </div>
