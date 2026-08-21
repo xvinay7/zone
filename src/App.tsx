@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AddTaskInput from './components/AddTaskInput'
 import Map from './components/Map'
+import Onboarding, { type ReminderPreference } from './components/Onboarding'
 import SettingsPanel from './components/SettingsPanel'
 import TaskList from './components/TaskList'
 import WhileImHereCard from './components/WhileImHereCard'
@@ -25,6 +26,16 @@ function App() {
   const [maxSuggestionsPerDay, setMaxSuggestionsPerDay] = useLocalStorage(
     'remind_max_suggestions',
     DEFAULT_SETTINGS.maxSuggestionsPerDay,
+  )
+
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useLocalStorage(
+    'remind_onboarding_completed',
+    false
+  )
+
+  const [notificationPreference, setNotificationPreference] = useLocalStorage<ReminderPreference>(
+    'remind_notification_preference',
+    'both'
   )
 
   // Track the simulated pin location from the Map component.
@@ -147,12 +158,24 @@ function App() {
         const taskCount = cardTasks.length
         const taskText = taskCount === 1 ? '1 task' : `${taskCount} tasks`
         
-        new Notification(`You're near ${nearbyStoreName}`, {
+        const options: NotificationOptions & { vibrate?: number[] } = {
           body: `You have ${taskText} to do here.`,
-        })
+        }
+
+        // Apply vibration if preference dictates
+        if (notificationPreference === 'vibration' || notificationPreference === 'both') {
+          options.vibrate = [200, 100, 200]
+        }
+        
+        if (notificationPreference === 'sound' || notificationPreference === 'both') {
+          // Note: Standard web Notifications don't allow custom sound files natively without 
+          // a Service Worker or Audio play() hack. In a PWA, this would rely on the OS default.
+        }
+
+        new Notification(`You're near ${nearbyStoreName}`, options as NotificationOptions)
       }
     }
-  }, [nearbyStoreName, cardTasks])
+  }, [nearbyStoreName, cardTasks, notificationPreference])
 
   const handleSimulatedLocationChange = useCallback((location: LatLng) => {
     setSimulatedLocation(location)
@@ -192,6 +215,17 @@ function App() {
   // Split tasks into pending and completed for separate sections.
   const pendingTasks = useMemo(() => tasks.filter((t) => t.status !== 'done'), [tasks])
   const completedTasks = useMemo(() => tasks.filter((t) => t.status === 'done'), [tasks])
+
+  if (!hasCompletedOnboarding) {
+    return (
+      <Onboarding
+        onComplete={(pref) => {
+          setNotificationPreference(pref)
+          setHasCompletedOnboarding(true)
+        }}
+      />
+    )
+  }
 
   return (
     <div className="min-h-svh bg-stone-50 font-sans text-stone-900">
