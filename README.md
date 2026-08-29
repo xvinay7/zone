@@ -1,16 +1,51 @@
-# React + Vite
+# Zone 📍
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A location-based reminder application built with TypeScript.
 
-Currently, two official plugins are available:
+## Overview
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Zone is designed to remind users about tasks based on their location.
 
-## React Compiler
+Instead of reminding users only at a particular time, the application explores
+the idea of triggering reminders when users reach a particular place.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Features
 
-## Expanding the Oxlint configuration
+- Location-based reminders
+- Reminder creation
+- Location-based triggering
+- Simple user experience
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Tech Stack
+
+- TypeScript
+- [actual technologies used]
+
+## How It Works
+
+1. User creates a reminder.
+2. User selects a location.
+3. The application tracks the relevant location.
+4. The reminder is triggered when the condition is met.
+
+## Getting Started
+
+[installation instructions]
+
+## Screenshots
+
+[add screenshots here]
+
+## What I Learned
+
+- TypeScript
+- Project structure
+- Working with location-based logic
+- Git and GitHub workflow
+
+## Future Improvements
+
+- Better UI
+- Improved location accuracy
+- Notification improvements
+- Additional reminder options
