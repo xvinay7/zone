@@ -16,10 +16,15 @@ the idea of triggering reminders when users reach a particular place.
 - Location-based triggering
 - Simple user experience
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 - TypeScript
-- [actual technologies used]
+- Vite
+- HTML
+- CSS
+- JavaScript
+- Supabase (planned/in progress)
+- MapLibre / OpenStreetMap ecosystem (planned/in progress)
 
 ## How It Works
 
