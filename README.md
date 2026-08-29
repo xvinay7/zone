@@ -2,12 +2,18 @@
 
 A location-based reminder application built with TypeScript.
 
-## Overview
+## 📍 What is Zone?
 
-Zone is designed to remind users about tasks based on their location.
+Zone is a context-aware reminder concept that helps users remember
+tasks when they are in the right place and situation, rather than
+only reminding them at a specific time.
 
-Instead of reminding users only at a particular time, the application explores
-the idea of triggering reminders when users reach a particular place.
+For example:
+
+> "Buy groceries on my way home."
+
+Instead of simply reminding the user at 6 PM, Zone explores whether
+the task can be completed naturally during the user's journey.
 
 ## Features
 
@@ -37,10 +43,6 @@ the idea of triggering reminders when users reach a particular place.
 
 [installation instructions]
 
-## Screenshots
-
-[add screenshots here]
-
 ## What I Learned
 
 - TypeScript
@@ -54,3 +56,12 @@ the idea of triggering reminders when users reach a particular place.
 - Improved location accuracy
 - Notification improvements
 - Additional reminder options
+
+## 📌 Project Status
+
+🟢 Prototype — Core UI and interaction flow implemented
+
+🟡 In Progress — Improving architecture and application logic
+
+🔵 Planned — Backend, real location services, AI intent extraction,
+and context-aware opportunity evaluation
